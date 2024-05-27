@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model refreshtokensmeta {
+  id          Int    @id @default(autoincrement())
+  user_id     Int
+  issuedAt    Int
+  device_id   String @db.VarChar(255)
+  ip          String @db.VarChar(255)
+  device_name String @db.VarChar(255)
+  users       users  @relation(fields: [user_id], references: [id], onUpdate: Restrict, map: "refreshtokensmeta_ibfk_1")
+
+  @@index([user_id], map: "user_id")
+}
+
+model users {
+  id                Int                 @id @default(autoincrement())
+  name              String              @db.VarChar(255)
+  email             String              @db.VarChar(255)
+  password          String              @db.VarChar(255)
+  refreshtokensmeta refreshtokensmeta[]
+}
