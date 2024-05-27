@@ -5,14 +5,14 @@ import { JwtService } from '@nestjs/jwt';
 export class GenerateTokensService {
   constructor(private jwtService: JwtService) {}
 
-  public tokensGenerator(device_id: string) {
+  public tokensGenerator(user_id: number) {
     const access_token = this.jwtService.sign(
-      { device_id },
+      { user_id },
       { secret: process.env.JWT_SECRET_ACCESS_KEY, expiresIn: '1m' },
     );
 
     const refresh_token = this.jwtService.sign(
-      { device_id },
+      { user_id },
       { secret: process.env.JWT_SECRET_REFRESH_KEY, expiresIn: '1d' },
     );
 

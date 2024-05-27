@@ -42,8 +42,6 @@ export class AppService {
 
       if (!userExistance) {
         const device_id = uuidv4();
-        const { access_token, refresh_token, issuedAt } =
-          this.generateTokens.tokensGenerator(device_id);
 
         const hash_password = await bcrypt.hash(data.password, 10);
 
@@ -57,6 +55,9 @@ export class AppService {
             id: true,
           },
         });
+
+        const { access_token, refresh_token, issuedAt } =
+          this.generateTokens.tokensGenerator(id);
 
         await this.prisma.refreshtokensmeta.create({
           data: {
@@ -105,7 +106,7 @@ export class AppService {
       // if user save device_id in localstorage, just based on this key generate new tokens and update the device in database
       if (data.device_id !== null) {
         const { access_token, refresh_token, issuedAt } =
-          this.generateTokens.tokensGenerator(data.device_id);
+          this.generateTokens.tokensGenerator(user.id);
 
         await this.prisma.refreshtokensmeta.updateMany({
           where: {
@@ -126,9 +127,9 @@ export class AppService {
       }
 
       // if device_id is not saved in localstorage - generate new and just create new session and new device id
-      const device_id = uuidv4();
+      const device_id: string = uuidv4();
       const { access_token, refresh_token, issuedAt } =
-        this.generateTokens.tokensGenerator(device_id);
+        this.generateTokens.tokensGenerator(user.id);
 
       await this.prisma.refreshtokensmeta.create({
         data: {
@@ -147,28 +148,64 @@ export class AppService {
     }
   }
 
-  async Check(query: { access: string }): Promise<{
+  async Refresh(
+    token: string,
+    req: Request,
+  ): Promise<{
     message: string;
     status: number;
-    request_to_refresh: boolean;
+    tokens: {
+      access: string;
+      refresh: string;
+    } | null;
   }> {
     try {
-      this.jwt.verify(query.access, {
-        secret: process.env.JWT_SECRET_ACCESS_KEY,
+      const decoded_token: { user_id: number; iat: number; exp: number } =
+        this.jwt.verify(token, {
+          secret: process.env.JWT_SECRET_REFRESH_KEY,
+        });
+
+      const { access_token, refresh_token, issuedAt } =
+        this.generateTokens.tokensGenerator(decoded_token.user_id);
+
+      console.log(issuedAt.iat, 'new time');
+      console.log(decoded_token);
+
+      const done = await this.prisma.refreshtokensmeta.updateMany({
+        where: {
+          user_id: decoded_token.user_id,
+          issuedAt: decoded_token.iat,
+        },
+        data: {
+          issuedAt: issuedAt.iat,
+          ip: req.ip,
+          device_name: req.headers['user-agent'],
+        },
       });
+
+      if (done.count !== 0) {
+        return {
+          message: 'Ok',
+          status: 200,
+          tokens: {
+            access: access_token,
+            refresh: refresh_token,
+          },
+        };
+      }
 
       return {
         message: 'Ok',
         status: 200,
-        request_to_refresh: false,
+        tokens: null,
       };
     } catch (error) {
       console.log(error);
 
       return {
-        message: 'Your access token is not valid anymore',
+        message: 'Your refresh token is not valid anymore',
         status: 401,
-        request_to_refresh: true,
+        tokens: null,
       };
     }
   }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Post, Req, Res } from '@nestjs/common';
 import { AppService } from './app.service';
 
 import { Request, Response } from 'express';
@@ -56,21 +56,17 @@ export class AppController {
     response_handler.basicReponse(res);
   }
 
-  @Post('/check')
-  async Check(@Req() req: Request, @Res() res: Response) {
-    console.log(req.cookies);
+  @Post('/refresh')
+  async Refresh(
+    @Body() data: { refresh_token: string },
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const { message, status, tokens } = await this.appService.Refresh(
+      data.refresh_token,
+      req,
+    );
 
-    if (req.cookies.access) {
-      const { message, status, request_to_refresh } =
-        await this.appService.Check(req.cookies.access);
-
-      return res.status(status).json({ message, status, request_to_refresh });
-    }
-
-    return res.status(404).json({
-      message: 'Access token is not exist',
-      status: 404,
-      request_to_refresh: false,
-    });
+    return res.status(status).json({ message, status, tokens });
   }
 }
