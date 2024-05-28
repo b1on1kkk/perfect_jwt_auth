@@ -1,30 +1,25 @@
-import { Body, Controller, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 
 import { Request, Response } from 'express';
+
+import type { SignInDTO } from 'types/SignInDTO';
+import type { loginInDTO } from 'types/loginInDTO';
+
 import { ReponseHandler } from 'utils/response_handler/reponse_handler';
-import { SignInDTO } from 'types/SignInDTO';
-import { loginInDTO } from 'types/loginInDTO';
+import { CheckTokensGuard } from './check-tokens/check-tokens.guard';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Post('/signin')
+  @UseGuards(CheckTokensGuard)
   async SignIn(
     @Body() data: SignInDTO,
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    if (
-      Object.keys(req.cookies).includes('access') ||
-      Object.keys(req.cookies).includes('refresh')
-    ) {
-      return res
-        .status(500)
-        .json({ message: "You've already logged in!", status: 500 });
-    }
-
     const response_handler = new ReponseHandler(
       await this.appService.SignIn(data, req),
     );
@@ -33,22 +28,12 @@ export class AppController {
   }
 
   @Post('/login')
+  @UseGuards(CheckTokensGuard)
   async Login(
     @Body() data: loginInDTO,
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    console.log(req.cookies);
-
-    if (
-      Object.keys(req.cookies).includes('access') ||
-      Object.keys(req.cookies).includes('refresh')
-    ) {
-      return res
-        .status(500)
-        .json({ message: "You've already logged in!", status: 500 });
-    }
-
     const response_handler = new ReponseHandler(
       await this.appService.Login(data, req),
     );
@@ -58,15 +43,16 @@ export class AppController {
 
   @Post('/refresh')
   async Refresh(
-    @Body() data: { refresh_token: string },
+    @Body() data: { issuedAt: number; refresh_token: string },
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const { message, status, tokens } = await this.appService.Refresh(
+    const { message, status } = await this.appService.Refresh(
       data.refresh_token,
+      data.issuedAt,
       req,
     );
 
-    return res.status(status).json({ message, status, tokens });
+    return res.status(status).json({ message, status });
   }
 }

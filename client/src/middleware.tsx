@@ -1,71 +1,132 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import axios from "axios";
 
-import axios, { AxiosError } from "axios";
+import { NextResponse, NextRequest } from "next/server";
 
-import { jwtVerify, SignJWT, decodeJwt } from "jose";
+import { jwtVerify, SignJWT } from "jose";
 
-export const getJWTSecretKey = () => {
-  const secret = process.env.JWT_SECRET_ACCESS_KEY;
-
-  if (!secret || secret.length === 0) {
-    throw new Error("Invalid token");
-  }
+// get secret key from .env file safely
+export const getJWTSecretKey = (secret: string | undefined) => {
+  if (!secret || secret.length === 0) throw new Error("Invalid token");
 
   return secret;
 };
 
+// main middleware
 export async function middleware(request: NextRequest, response: NextResponse) {
+  // get access and refresh token
   const access_token = request.cookies.get("access")?.value;
   const refresh_token = request.cookies.get("refresh")?.value;
 
-  // console.log(request.nextUrl.pathname);
-
-  console.log(access_token, "----------------access_token----------------");
-  console.log(refresh_token, "----------------refresh_token----------------");
-
-  if (!access_token && !refresh_token) {
+  // if access or refresh token do not exist - redirect user to login page
+  if (!access_token || !refresh_token) {
     return NextResponse.redirect(new URL("/registration/login", request.url));
   }
 
-  if (access_token && !refresh_token) {
-    return NextResponse.redirect(new URL("/registration/login", request.url));
-  }
+  // otherwise move on
+  try {
+    // verify access token if it is not stale
+    await jwtVerify(
+      access_token,
+      new TextEncoder().encode(
+        getJWTSecretKey(process.env.JWT_SECRET_ACCESS_KEY)
+      )
+    );
 
-  if (access_token) {
+    // if everything ok - just move on
+    if (request.nextUrl.pathname !== "/") {
+      NextResponse.redirect(new URL("/", request.url));
+    }
+
+    return NextResponse.next();
+  } catch (error) {
     try {
-      await jwtVerify(
-        access_token,
-        new TextEncoder().encode(getJWTSecretKey())
+      // if error with access token occured, it means that something does wrong with it, verify refresh token
+      const decodedRefreshToken = await jwtVerify(
+        refresh_token,
+        new TextEncoder().encode(
+          getJWTSecretKey(process.env.JWT_SECRET_REFRESH_KEY)
+        )
       );
 
-      return;
-    } catch (error) {
-      return NextResponse.redirect(new URL("/registration/login", request.url));
-    }
-  }
+      // if fine, generate new access and refresh tokens
+      const { new_access_token, new_refresh_token } = await handleTokenRefresh(
+        request,
+        decodedRefreshToken.payload.user_id as number
+      );
 
-  if (refresh_token) {
-    try {
-      const { data } = await axios.post<{
-        tokens: {
-          access: string;
-          refresh: string;
-        } | null;
-      }>("http://localhost:4000/refresh", {
-        refresh_token
-      });
+      if (request.nextUrl.pathname !== "/") {
+        const response = NextResponse.redirect(new URL("/", request.url));
+        response.cookies.set("access", new_access_token);
+        response.cookies.set("refresh", new_refresh_token);
 
-      console.log(data);
-
-      if (data.tokens) {
-        response.cookies.set("refresh", data.tokens.refresh);
-        response.cookies.set("access", data.tokens.access);
+        // move on with new cookies
+        return response;
       }
+
+      const response = NextResponse.next();
+      response.cookies.set("access", new_access_token);
+      response.cookies.set("refresh", new_refresh_token);
+
+      // move on with new cookies
+      return response;
     } catch (error) {
       return NextResponse.redirect(new URL("/registration/login", request.url));
     }
   }
+}
+
+async function handleTokenRefresh(request: NextRequest, user_id: number) {
+  const old_access_token = request.cookies.get("access")?.value;
+  const old_refresh_token = request.cookies.get("refresh")?.value;
+
+  // refresh token for 1h
+  const new_refresh_token = await tokenGenerator(
+    "1h",
+    getJWTSecretKey(process.env.JWT_SECRET_REFRESH_KEY),
+    user_id
+  );
+
+  // then get when refresh token was issued
+  const decodedRefreshToken = await jwtVerify(
+    new_refresh_token,
+    new TextEncoder().encode(
+      getJWTSecretKey(process.env.JWT_SECRET_REFRESH_KEY)
+    )
+  );
+
+  // send request to the server to check if this refresh token is valid
+  await axios.post(
+    "http://localhost:4000/refresh",
+    {
+      issuedAt: decodedRefreshToken.payload.iat,
+      refresh_token: old_refresh_token
+    },
+    {
+      withCredentials: true,
+      headers: {
+        "Set-Cookie": `refresh_token=${old_refresh_token};access_token=${old_access_token}`
+      }
+    }
+  );
+
+  // generate new access token
+  const new_access_token = await tokenGenerator(
+    "30s",
+    getJWTSecretKey(process.env.JWT_SECRET_ACCESS_KEY),
+    user_id
+  );
+
+  // return new tokens
+  return { new_access_token, new_refresh_token };
+}
+
+// just token generator
+async function tokenGenerator(alive: string, secret: string, user_id: number) {
+  return await new SignJWT({ user_id })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(alive)
+    .sign(new TextEncoder().encode(secret));
 }
 
 export const config = {

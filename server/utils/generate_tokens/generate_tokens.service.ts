@@ -8,12 +8,12 @@ export class GenerateTokensService {
   public tokensGenerator(user_id: number) {
     const access_token = this.jwtService.sign(
       { user_id },
-      { secret: process.env.JWT_SECRET_ACCESS_KEY, expiresIn: '1m' },
+      { secret: process.env.JWT_SECRET_ACCESS_KEY, expiresIn: '30s' },
     );
 
     const refresh_token = this.jwtService.sign(
       { user_id },
-      { secret: process.env.JWT_SECRET_REFRESH_KEY, expiresIn: '1d' },
+      { secret: process.env.JWT_SECRET_REFRESH_KEY, expiresIn: '1h' },
     );
 
     const refresh_token_issued: { name: string; iat: number; exp: number } =

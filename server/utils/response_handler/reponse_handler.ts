@@ -2,12 +2,10 @@ import { Response } from 'express';
 
 const accessCookieOptions = {
   httpOnly: true,
-  maxAge: 60 * 1000, // 1 minute
 };
 
 const refreshCookieOptions = {
   httpOnly: true,
-  maxAge: 86400000 * 1000, // 1 day
 };
 
 export class ReponseHandler {

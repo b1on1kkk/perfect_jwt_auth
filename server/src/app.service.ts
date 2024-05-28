@@ -150,14 +150,11 @@ export class AppService {
 
   async Refresh(
     token: string,
+    issuedAt: number,
     req: Request,
   ): Promise<{
     message: string;
     status: number;
-    tokens: {
-      access: string;
-      refresh: string;
-    } | null;
   }> {
     try {
       const decoded_token: { user_id: number; iat: number; exp: number } =
@@ -165,47 +162,33 @@ export class AppService {
           secret: process.env.JWT_SECRET_REFRESH_KEY,
         });
 
-      const { access_token, refresh_token, issuedAt } =
-        this.generateTokens.tokensGenerator(decoded_token.user_id);
-
-      console.log(issuedAt.iat, 'new time');
-      console.log(decoded_token);
-
-      const done = await this.prisma.refreshtokensmeta.updateMany({
+      const updated = await this.prisma.refreshtokensmeta.updateMany({
         where: {
           user_id: decoded_token.user_id,
           issuedAt: decoded_token.iat,
         },
         data: {
-          issuedAt: issuedAt.iat,
+          issuedAt: issuedAt,
           ip: req.ip,
           device_name: req.headers['user-agent'],
         },
       });
 
-      if (done.count !== 0) {
+      if (updated.count > 0) {
         return {
           message: 'Ok',
           status: 200,
-          tokens: {
-            access: access_token,
-            refresh: refresh_token,
-          },
         };
       }
 
       return {
-        message: 'Ok',
-        status: 200,
-        tokens: null,
+        message: 'Not found!',
+        status: 404,
       };
     } catch (error) {
-      console.log(error);
-
       return {
         message: 'Your refresh token is not valid anymore',
         status: 401,
-        tokens: null,
       };
     }
   }
