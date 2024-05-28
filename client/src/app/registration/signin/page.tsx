@@ -1,15 +1,20 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import type { Data } from "@/types/data";
-import { KeyRound, Mail, UserRound } from "lucide-react";
 import Link from "next/link";
 
 import React, { useState } from "react";
+import useRegistration from "@/hook/useRegistration";
+
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+import { KeyRound, Mail, UserRound } from "lucide-react";
+
+import type { Data } from "@/types/data";
 
 const Registration = () => {
+  const registration = useRegistration();
+
   const [data, setData] = useState<Data>({
     name: "",
     email: "",
@@ -28,13 +33,6 @@ const Registration = () => {
     }));
   };
 
-  const handleCheckbox = (status: boolean) => {
-    setData((prevFormData) => ({
-      ...prevFormData,
-      status
-    }));
-  };
-
   return (
     <div className="p-5 h-full flex flex-col w-full">
       <header className="mb-10">
@@ -47,7 +45,7 @@ const Registration = () => {
           onSubmit={(e) => {
             e.preventDefault();
 
-            console.log(data);
+            registration.mutate({ ...data });
           }}
         >
           <Input
@@ -78,14 +76,6 @@ const Registration = () => {
           />
 
           <div className="flex flex-col gap-3 text-sm text-white">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="remember_me"
-                onCheckedChange={handleCheckbox}
-                checked={data.status}
-              />
-              <label htmlFor="remember_me">remember me</label>
-            </div>
             <div>
               <p>
                 Do have an accout?{" "}

@@ -13,6 +13,9 @@ export const getJWTSecretKey = (secret: string | undefined) => {
 
 // main middleware
 export async function middleware(request: NextRequest, response: NextResponse) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("User-Agent", request.headers.get("user-agent")!);
+
   // get access and refresh token
   const access_token = request.cookies.get("access")?.value;
   const refresh_token = request.cookies.get("refresh")?.value;
@@ -76,7 +79,6 @@ export async function middleware(request: NextRequest, response: NextResponse) {
 }
 
 async function handleTokenRefresh(request: NextRequest, user_id: number) {
-  const old_access_token = request.cookies.get("access")?.value;
   const old_refresh_token = request.cookies.get("refresh")?.value;
 
   // refresh token for 1h
@@ -99,13 +101,11 @@ async function handleTokenRefresh(request: NextRequest, user_id: number) {
     "http://localhost:4000/refresh",
     {
       issuedAt: decodedRefreshToken.payload.iat,
-      refresh_token: old_refresh_token
+      refresh_token: old_refresh_token,
+      device: request.headers.get("user-agent")
     },
     {
-      withCredentials: true,
-      headers: {
-        "Set-Cookie": `refresh_token=${old_refresh_token};access_token=${old_access_token}`
-      }
+      withCredentials: true
     }
   );
 

@@ -151,6 +151,7 @@ export class AppService {
   async Refresh(
     token: string,
     issuedAt: number,
+    device: string,
     req: Request,
   ): Promise<{
     message: string;
@@ -162,6 +163,8 @@ export class AppService {
           secret: process.env.JWT_SECRET_REFRESH_KEY,
         });
 
+      console.log(req.headers);
+
       const updated = await this.prisma.refreshtokensmeta.updateMany({
         where: {
           user_id: decoded_token.user_id,
@@ -170,7 +173,7 @@ export class AppService {
         data: {
           issuedAt: issuedAt,
           ip: req.ip,
-          device_name: req.headers['user-agent'],
+          device_name: device,
         },
       });
 

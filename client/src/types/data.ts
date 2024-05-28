@@ -4,3 +4,7 @@ export interface Data {
   password: string;
   status: boolean;
 }
+
+export interface LoginData extends Data {
+  device_id: string | null;
+}

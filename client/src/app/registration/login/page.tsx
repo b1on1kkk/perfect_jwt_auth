@@ -1,40 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import Link from "next/link";
 
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
+import React, { useState } from "react";
+import useLoginUser from "@/hook/useLoginUser";
 
 import { KeyRound, Mail } from "lucide-react";
 
-import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
 import type { Data } from "@/types/data";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-
-import axios, { AxiosError } from "axios";
-
-interface LoginData extends Data {
-  device_id: string | null;
-}
-
-const useLoginUser = () => {
-  return useMutation<null, AxiosError, LoginData>({
-    mutationFn: (data: LoginData) =>
-      axios
-        .post(
-          "http://localhost:4000/login",
-          {
-            email: data.email,
-            device_id: data.device_id,
-            password: data.password,
-            status: data.status
-          },
-          { withCredentials: true }
-        )
-        .then((res) => res.data)
-  });
-};
 
 const Login = () => {
   const loginUser = useLoginUser();
@@ -56,12 +32,7 @@ const Login = () => {
     }));
   };
 
-  const handleCheckbox = (status: boolean) => {
-    setData((prevFormData) => ({
-      ...prevFormData,
-      status
-    }));
-  };
+  console.log(loginUser);
 
   return (
     <div className="p-5 h-full flex flex-col w-full">
@@ -74,7 +45,6 @@ const Login = () => {
           className="flex flex-col gap-5 flex-1"
           onSubmit={(e) => {
             e.preventDefault();
-
             loginUser.mutate({ ...data, device_id: null });
           }}
         >
@@ -99,10 +69,6 @@ const Login = () => {
           />
 
           <div className="flex flex-col gap-3 text-sm text-white">
-            <div className="flex items-center gap-2">
-              <Checkbox id="remember_me" onCheckedChange={handleCheckbox} />
-              <label htmlFor="remember_me">remember me</label>
-            </div>
             <div>
               <p>
                 Do not have an accout?{" "}

@@ -43,13 +43,16 @@ export class AppController {
 
   @Post('/refresh')
   async Refresh(
-    @Body() data: { issuedAt: number; refresh_token: string },
+    @Body() data: { issuedAt: number; refresh_token: string; device: string },
     @Req() req: Request,
     @Res() res: Response,
   ) {
+    console.log(req);
+
     const { message, status } = await this.appService.Refresh(
       data.refresh_token,
       data.issuedAt,
+      data.device,
       req,
     );
 
