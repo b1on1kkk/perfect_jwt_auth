@@ -10,17 +10,19 @@ const useLoginUser = (setValue: (value: string | null) => void) => {
   const router = useRouter();
 
   return useMutation<loginUserResponse, AxiosError, LoginData>({
-    mutationFn: (data: LoginData) => {
-      return axios
+    mutationFn: async (data: LoginData) => {
+      return await axios
         .post<loginUserResponse>(
           "http://localhost:4000/login",
           {
             email: data.email,
-            device_id: data.device_id,
+            status: data.status,
             password: data.password,
-            status: data.status
+            device_id: data.device_id
           },
-          { withCredentials: true }
+          {
+            withCredentials: true
+          }
         )
         .then((res) => {
           setValue(res.data.device_id);

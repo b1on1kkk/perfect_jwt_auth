@@ -107,11 +107,13 @@ async function handleTokenRefresh(request: NextRequest, user_id: number) {
     "http://localhost:4000/refresh",
     {
       issuedAt: decodedRefreshToken.payload.iat,
-      refresh_token: old_refresh_token,
       device: request.headers.get("user-agent")
     },
     {
-      withCredentials: true
+      withCredentials: true,
+      headers: {
+        Authorization: `Bearer:${old_refresh_token}`
+      }
     }
   );
 

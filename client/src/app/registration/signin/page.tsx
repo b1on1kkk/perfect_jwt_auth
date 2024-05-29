@@ -52,7 +52,6 @@ const Registration = () => {
           className="flex flex-col gap-5 flex-1"
           onSubmit={(e) => {
             e.preventDefault();
-
             registration.mutate({ ...data });
           }}
         >

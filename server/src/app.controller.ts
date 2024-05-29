@@ -4,7 +4,8 @@ import { AppService } from './app.service';
 import { Request, Response } from 'express';
 
 import type { SignInDTO } from 'types/SignInDTO';
-import type { LoginInDTO } from 'types/loginInDTO';
+import type { RefreshDTO } from 'types/RefreshDTO';
+import type { LoginInDTO } from 'types/LoginInDTO';
 
 import { ReponseHandler } from 'utils/response_handler/reponse_handler';
 import { CheckTokensGuard } from './check-tokens/check-tokens.guard';
@@ -47,12 +48,15 @@ export class AppController {
 
   @Post('/refresh')
   async Refresh(
-    @Body() data: { issuedAt: number; refresh_token: string; device: string },
+    @Body() data: RefreshDTO,
     @Req() req: Request,
     @Res() res: Response,
   ) {
+    // get old token
+    const old_refresh_token = req.headers.authorization.split(':')[1];
+
     const { message, status } = await this.appService.Refresh(
-      data.refresh_token,
+      old_refresh_token,
       data.issuedAt,
       data.device,
       req,
@@ -60,4 +64,8 @@ export class AppController {
 
     return res.status(status).json({ message, status });
   }
+
+  // just remove cookies and delete data from db
+  // @Post('/logout')
+  // ... and more ...
 }

@@ -39,4 +39,18 @@ export class Responses {
       tokens: null,
     };
   }
+
+  public refreshNotAllowed(status: number) {
+    return {
+      message: 'Not found or your refresh token is not valid anymore',
+      status: status,
+    };
+  }
+
+  public refreshAllowed() {
+    return {
+      message: 'Ok',
+      status: 200,
+    };
+  }
 }

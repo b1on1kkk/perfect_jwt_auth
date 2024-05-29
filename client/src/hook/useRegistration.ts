@@ -10,8 +10,8 @@ const useRegistration = () => {
   const router = useRouter();
 
   return useMutation<null, AxiosError, Data>({
-    mutationFn: (data: Data) => {
-      return axios
+    mutationFn: async (data: Data) => {
+      return await axios
         .post(
           "http://localhost:4000/signin",
           {

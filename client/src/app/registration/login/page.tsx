@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import React, { useState } from "react";
 import useLoginUser from "@/hook/useLoginUser";
+import useLocalStorage from "@/hook/useLocalStorage";
 
 import { KeyRound, Mail } from "lucide-react";
 
@@ -12,8 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 
 import type { Data } from "@/types/data";
-
-import useLocalStorage from "@/hook/useLocalStorage";
 
 const Login = () => {
   const { storedValue, setValue } = useLocalStorage("device_id", null);
@@ -53,7 +52,7 @@ const Login = () => {
       <main>
         <form
           className="flex flex-col gap-5 flex-1"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             loginUser.mutate({ ...data, device_id: storedValue });
           }}

@@ -11,7 +11,9 @@ import { GenerateTokensService } from 'utils/generate_tokens/generate_tokens.ser
 
 import type { Request } from 'express';
 import type { SignInDTO } from 'types/SignInDTO';
-import type { LoginInDTO } from 'types/loginInDTO';
+import type { LoginInDTO } from 'types/LoginInDTO';
+import type { registrationResponse } from 'types/registrationResponse';
+import { refreshResponse } from 'types/refreshResponse';
 
 @Injectable()
 export class AppService {
@@ -25,15 +27,7 @@ export class AppService {
     this.reponses = new Responses();
   }
 
-  async SignIn(
-    data: SignInDTO,
-    req: Request,
-  ): Promise<{
-    message: string;
-    status: number;
-    device_id: string | null;
-    tokens: { access: string; refresh: string } | null;
-  }> {
+  async SignIn(data: SignInDTO, req: Request): registrationResponse {
     try {
       const userExistance = await this.prisma.users.findFirst({
         where: {
@@ -44,13 +38,11 @@ export class AppService {
       if (!userExistance) {
         const device_id = uuidv4();
 
-        const hash_password = await bcrypt.hash(data.password, 10);
-
         const { id } = await this.prisma.users.create({
           data: {
             name: data.name,
             email: data.email,
-            password: hash_password,
+            password: await bcrypt.hash(data.password, 10),
           },
           select: {
             id: true,
@@ -75,40 +67,30 @@ export class AppService {
 
       return this.reponses.dataIsUsed();
     } catch (error) {
-      console.log(error);
       return this.reponses.serverError();
     }
   }
 
-  async Login(
-    data: LoginInDTO,
-    req: Request,
-  ): Promise<{
-    message: string;
-    status: number;
-    device_id: string | null;
-    tokens: { access: string; refresh: string } | null;
-  }> {
+  async Login(data: LoginInDTO, req: Request): registrationResponse {
     try {
       const user = await this.prisma.users.findFirst({
         where: {
           email: data.email,
         },
       });
-
       // if user is not found - show error
       if (!user) return this.reponses.notFound();
 
       const passwordMatch = await bcrypt.compare(data.password, user.password);
-
       // if password is not match - show error
       if (!passwordMatch) return this.reponses.notFound();
 
+      // generate tokens
+      const { access_token, refresh_token, issuedAt } =
+        this.generateTokens.tokensGenerator(user.id);
+
       // if user save device_id in localstorage, just based on this key generate new tokens and update the device in database
       if (data.device_id) {
-        const { access_token, refresh_token, issuedAt } =
-          this.generateTokens.tokensGenerator(user.id);
-
         await this.prisma.refreshtokensmeta.updateMany({
           where: {
             device_id: data.device_id,
@@ -129,8 +111,6 @@ export class AppService {
 
       // if device_id is not saved in localstorage - generate new and just create new session and new device id
       const device_id: string = uuidv4();
-      const { access_token, refresh_token, issuedAt } =
-        this.generateTokens.tokensGenerator(user.id);
 
       await this.prisma.refreshtokensmeta.create({
         data: {
@@ -144,7 +124,6 @@ export class AppService {
 
       return this.reponses.success(device_id, access_token, refresh_token);
     } catch (error) {
-      console.log(error);
       return this.reponses.serverError();
     }
   }
@@ -154,17 +133,12 @@ export class AppService {
     issuedAt: number,
     device: string,
     req: Request,
-  ): Promise<{
-    message: string;
-    status: number;
-  }> {
+  ): refreshResponse {
     try {
       const decoded_token: { user_id: number; iat: number; exp: number } =
         this.jwt.verify(token, {
           secret: process.env.JWT_SECRET_REFRESH_KEY,
         });
-
-      console.log(req.headers);
 
       const updated = await this.prisma.refreshtokensmeta.updateMany({
         where: {
@@ -178,22 +152,11 @@ export class AppService {
         },
       });
 
-      if (updated.count > 0) {
-        return {
-          message: 'Ok',
-          status: 200,
-        };
-      }
+      if (updated.count > 0) return this.reponses.refreshAllowed();
 
-      return {
-        message: 'Not found!',
-        status: 404,
-      };
+      return this.reponses.refreshNotAllowed(404);
     } catch (error) {
-      return {
-        message: 'Your refresh token is not valid anymore',
-        status: 401,
-      };
+      return this.reponses.refreshNotAllowed(401);
     }
   }
 }
