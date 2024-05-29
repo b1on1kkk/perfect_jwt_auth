@@ -9,11 +9,16 @@ import { KeyRound, Mail } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import type { Data } from "@/types/data";
 
+import useLocalStorage from "@/hook/useLocalStorage";
+
 const Login = () => {
-  const loginUser = useLoginUser();
+  const { storedValue, setValue } = useLocalStorage("device_id", null);
+
+  const loginUser = useLoginUser(setValue);
 
   const [data, setData] = useState<Data>({
     email: "",
@@ -32,7 +37,12 @@ const Login = () => {
     }));
   };
 
-  console.log(loginUser);
+  const handleCheckbox = (status: boolean) => {
+    setData((prevFormData) => ({
+      ...prevFormData,
+      status
+    }));
+  };
 
   return (
     <div className="p-5 h-full flex flex-col w-full">
@@ -45,7 +55,7 @@ const Login = () => {
           className="flex flex-col gap-5 flex-1"
           onSubmit={(e) => {
             e.preventDefault();
-            loginUser.mutate({ ...data, device_id: null });
+            loginUser.mutate({ ...data, device_id: storedValue });
           }}
         >
           <Input
@@ -69,6 +79,10 @@ const Login = () => {
           />
 
           <div className="flex flex-col gap-3 text-sm text-white">
+            <div className="flex items-center gap-2">
+              <Checkbox id="remember_me" onCheckedChange={handleCheckbox} />
+              <label htmlFor="remember_me">remember me</label>
+            </div>
             <div>
               <p>
                 Do not have an accout?{" "}

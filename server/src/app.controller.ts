@@ -4,7 +4,7 @@ import { AppService } from './app.service';
 import { Request, Response } from 'express';
 
 import type { SignInDTO } from 'types/SignInDTO';
-import type { loginInDTO } from 'types/loginInDTO';
+import type { LoginInDTO } from 'types/loginInDTO';
 
 import { ReponseHandler } from 'utils/response_handler/reponse_handler';
 import { CheckTokensGuard } from './check-tokens/check-tokens.guard';
@@ -24,13 +24,15 @@ export class AppController {
       await this.appService.SignIn(data, req),
     );
 
-    response_handler.basicReponse(res);
+    if (data.status) return response_handler.rememberMeResponse(res);
+
+    return response_handler.basicReponse(res);
   }
 
   @Post('/login')
   @UseGuards(CheckTokensGuard)
   async Login(
-    @Body() data: loginInDTO,
+    @Body() data: LoginInDTO,
     @Req() req: Request,
     @Res() res: Response,
   ) {
@@ -38,7 +40,9 @@ export class AppController {
       await this.appService.Login(data, req),
     );
 
-    response_handler.basicReponse(res);
+    if (data.status) return response_handler.rememberMeResponse(res);
+
+    return response_handler.basicReponse(res);
   }
 
   @Post('/refresh')
@@ -47,8 +51,6 @@ export class AppController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    console.log(req);
-
     const { message, status } = await this.appService.Refresh(
       data.refresh_token,
       data.issuedAt,

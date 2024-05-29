@@ -7,6 +7,7 @@ import useRegistration from "@/hook/useRegistration";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { KeyRound, Mail, UserRound } from "lucide-react";
 
@@ -30,6 +31,13 @@ const Registration = () => {
     setData((prevFormData) => ({
       ...prevFormData,
       [name]: value
+    }));
+  };
+
+  const handleCheckbox = (status: boolean) => {
+    setData((prevFormData) => ({
+      ...prevFormData,
+      status
     }));
   };
 
@@ -76,6 +84,11 @@ const Registration = () => {
           />
 
           <div className="flex flex-col gap-3 text-sm text-white">
+            <div className="flex items-center gap-2">
+              <Checkbox id="remember_me" onCheckedChange={handleCheckbox} />
+              <label htmlFor="remember_me">remember me</label>
+            </div>
+
             <div>
               <p>
                 Do have an accout?{" "}

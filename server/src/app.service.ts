@@ -1,16 +1,17 @@
+import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 
+import { JwtService } from '@nestjs/jwt';
 import { Injectable } from '@nestjs/common';
+
 import { PrismaService } from 'prisma/prisma.service';
 
-import * as bcrypt from 'bcrypt';
-
-import { Request } from 'express';
-import { GenerateTokensService } from 'utils/generate_tokens/generate_tokens.service';
 import { Responses } from 'utils/responses/responses';
-import { SignInDTO } from 'types/SignInDTO';
-import { loginInDTO } from 'types/loginInDTO';
-import { JwtService } from '@nestjs/jwt';
+import { GenerateTokensService } from 'utils/generate_tokens/generate_tokens.service';
+
+import type { Request } from 'express';
+import type { SignInDTO } from 'types/SignInDTO';
+import type { LoginInDTO } from 'types/loginInDTO';
 
 @Injectable()
 export class AppService {
@@ -80,7 +81,7 @@ export class AppService {
   }
 
   async Login(
-    data: loginInDTO,
+    data: LoginInDTO,
     req: Request,
   ): Promise<{
     message: string;
@@ -104,7 +105,7 @@ export class AppService {
       if (!passwordMatch) return this.reponses.notFound();
 
       // if user save device_id in localstorage, just based on this key generate new tokens and update the device in database
-      if (data.device_id !== null) {
+      if (data.device_id) {
         const { access_token, refresh_token, issuedAt } =
           this.generateTokens.tokensGenerator(user.id);
 

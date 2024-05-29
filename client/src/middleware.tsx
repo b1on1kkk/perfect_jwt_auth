@@ -20,8 +20,8 @@ export async function middleware(request: NextRequest, response: NextResponse) {
   const access_token = request.cookies.get("access")?.value;
   const refresh_token = request.cookies.get("refresh")?.value;
 
-  // if access or refresh token do not exist - redirect user to login page
-  if (!access_token || !refresh_token) {
+  // if access token do not exist - redirect user to login page
+  if (!access_token) {
     return NextResponse.redirect(new URL("/registration/login", request.url));
   }
 
@@ -43,22 +43,33 @@ export async function middleware(request: NextRequest, response: NextResponse) {
     return NextResponse.next();
   } catch (error) {
     try {
-      // if error with access token occured, it means that something does wrong with it, verify refresh token
-      const decodedRefreshToken = await jwtVerify(
-        refresh_token,
-        new TextEncoder().encode(
-          getJWTSecretKey(process.env.JWT_SECRET_REFRESH_KEY)
-        )
-      );
+      // if user has refresh token - move on
+      if (refresh_token) {
+        // if error with access token occured, it means that something does wrong with it, verify refresh token
+        const decodedRefreshToken = await jwtVerify(
+          refresh_token,
+          new TextEncoder().encode(
+            getJWTSecretKey(process.env.JWT_SECRET_REFRESH_KEY)
+          )
+        );
 
-      // if fine, generate new access and refresh tokens
-      const { new_access_token, new_refresh_token } = await handleTokenRefresh(
-        request,
-        decodedRefreshToken.payload.user_id as number
-      );
+        // if fine, generate new access and refresh tokens
+        const { new_access_token, new_refresh_token } =
+          await handleTokenRefresh(
+            request,
+            decodedRefreshToken.payload.user_id as number
+          );
 
-      if (request.nextUrl.pathname !== "/") {
-        const response = NextResponse.redirect(new URL("/", request.url));
+        if (request.nextUrl.pathname !== "/") {
+          const response = NextResponse.redirect(new URL("/", request.url));
+          response.cookies.set("access", new_access_token);
+          response.cookies.set("refresh", new_refresh_token);
+
+          // move on with new cookies
+          return response;
+        }
+
+        const response = NextResponse.next();
         response.cookies.set("access", new_access_token);
         response.cookies.set("refresh", new_refresh_token);
 
@@ -66,12 +77,7 @@ export async function middleware(request: NextRequest, response: NextResponse) {
         return response;
       }
 
-      const response = NextResponse.next();
-      response.cookies.set("access", new_access_token);
-      response.cookies.set("refresh", new_refresh_token);
-
-      // move on with new cookies
-      return response;
+      return NextResponse.redirect(new URL("/registration/login", request.url));
     } catch (error) {
       return NextResponse.redirect(new URL("/registration/login", request.url));
     }
