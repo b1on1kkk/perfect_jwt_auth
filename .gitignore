@@ -1,9 +1,7 @@
+client/.env
 client/.next
 client/node_modules
-client/README.md
-client/.env
 
-server/README.md
-server/node_modules
 server/dist
 server/.env
+server/node_modules
